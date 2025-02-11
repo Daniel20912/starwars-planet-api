@@ -3,6 +3,9 @@ package com.danieloliveira.starwarsplanetapi.domain;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -11,6 +14,7 @@ import org.springframework.test.context.jdbc.Sql;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static com.danieloliveira.starwarsplanetapi.common.PlanetConstants.PLANET;
 import static com.danieloliveira.starwarsplanetapi.common.PlanetConstants.TATOOINE;
@@ -24,6 +28,25 @@ public class PlanetRepositoryTest {
 
     @Autowired
     private TestEntityManager testEntityManager; // permite interagir com o banco de dados sem ser via repository
+
+    // metodo para gerar planetas com dados inválidos para os testes
+    private static Stream<Arguments> providesInvalidPlanets() {
+        return Stream.of(
+                Arguments.of(new Planet(null, "climate", "terrain")),
+                Arguments.of(new Planet("name", null, "terrain")),
+                Arguments.of(new Planet("name", "climate", null)),
+                Arguments.of(new Planet(null, null, "terrain")),
+                Arguments.of(new Planet(null, "climate", null)),
+                Arguments.of(new Planet("name", null, null)),
+                Arguments.of(new Planet(null, null, null)),
+                Arguments.of(new Planet("", "climate", "terrain")),
+                Arguments.of(new Planet("name", "", "terrain")),
+                Arguments.of(new Planet("name", "climate", "")),
+                Arguments.of(new Planet("", "", "terrain")),
+                Arguments.of(new Planet("", "climate", "")),
+                Arguments.of(new Planet("name", "", "")),
+                Arguments.of(new Planet("", "", "")));
+    }
 
     /*
         seta o id do PLANET para nulo após cada teste,
@@ -51,13 +74,10 @@ public class PlanetRepositoryTest {
         Assertions.assertThat(sut.getTerrain()).isEqualTo(planet.getTerrain());
     }
 
-    @Test
-    public void criarPlaneta_ComDadosInvalidos_LancaExcessao() {
-        Planet emptyPlanet = new Planet();
-        Planet invalidPlanet = new Planet("", "", "");
-
-        Assertions.assertThatThrownBy(() -> planetRepository.save(emptyPlanet)).isInstanceOf(RuntimeException.class);
-        Assertions.assertThatThrownBy(() -> planetRepository.save(invalidPlanet)).isInstanceOf(RuntimeException.class);
+    @ParameterizedTest
+    @MethodSource("providesInvalidPlanets") // indica o nome do teste que vai prover os dados
+    public void criarPlaneta_ComDadosInvalidos_LancaExcessao(Planet planet) {
+        Assertions.assertThatThrownBy(() -> planetRepository.save(planet)).isInstanceOf(RuntimeException.class);
     }
 
     @Test
